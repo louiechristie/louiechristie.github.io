@@ -1,3 +1,5 @@
+@import url("nav.css");
+
 /* Utility */
 .hidden {
   display: none;
@@ -105,7 +107,6 @@ footer {
 header {
   margin-bottom: 2em;
   /* border-bottom: 1px solid #e8eaed; */
-  border-bottom: 4px solid var(--complementary-color);
   /* box-shadow: 0px 5px 10px 0px rgba(0, 0, 0, 0.45); */
 }
 
@@ -581,77 +582,6 @@ cite {
 
 .instagram-media {
   min-width: 200px !important;
-}
-
-/* Menu */
-
-nav {
-  display: flex;
-  background: var(--grey-color);
-}
-
-#home-button {
-  margin-left: 10px;
-  display: flex;
-}
-
-#home-button a {
-  color: white;
-}
-
-/* [ON BIG SCREEN] */
-/* Wrapper */
-#hamnav {
-  width: 100%;
-}
-
-/* Hide Hamburger */
-#hamnav label,
-#hamburger {
-  display: none;
-}
-
-/* Horizontal Menu Items */
-#hamitems {
-  display: flex;
-}
-#hamitems a {
-  width: 20%; /* 100% / 5 tabs = 20% */
-  padding: 10px;
-  color: white;
-  text-decoration: none;
-  text-align: center;
-}
-#hamitems a:hover {
-  background: var(--analogous-color);
-}
-
-/* [ON SMALL SCREENS] */
-@media screen and (max-width: 768px) {
-  /* Show Hamburger Icon */
-  #hamnav label {
-    display: inline-block;
-    color: white;
-    font-style: normal;
-    font-size: 1.2em;
-    padding: 10px;
-  }
-
-  /* Break down menu items into vertical */
-  #hamitems a {
-    box-sizing: border-box;
-    display: block;
-    width: 100%;
-    border-top: 1px solid #333;
-  }
-
-  /* Toggle Show/Hide Menu */
-  #hamitems {
-    display: none;
-  }
-  #hamnav input:checked ~ #hamitems {
-    display: block;
-  }
 }
 
 .footnotes-container {
