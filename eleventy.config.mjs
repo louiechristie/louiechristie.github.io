@@ -1,21 +1,39 @@
-import 'dotenv/config';
-import analytics from './analytics.cjs';
-import Image from '@11ty/eleventy-img';
-import Cache from '@11ty/eleventy-cache-assets';
-import { Temporal } from 'temporal-polyfill';
+import {
+  IdAttributePlugin,
+  InputPathToUrlTransformPlugin,
+  HtmlBasePlugin,
+} from '@11ty/eleventy';
+import { feedPlugin } from '@11ty/eleventy-plugin-rss';
+import pluginSyntaxHighlight from '@11ty/eleventy-plugin-syntaxhighlight';
+import pluginNavigation from '@11ty/eleventy-navigation';
 import { eleventyImageTransformPlugin } from '@11ty/eleventy-img';
-import { EleventyHtmlBasePlugin } from '@11ty/eleventy';
+
+import pluginFilters from './_config/filters.js';
+
+import Cache from '@11ty/eleventy-cache-assets';
+import 'dotenv/config';
 import eleventyAutoCacheBuster from 'eleventy-auto-cache-buster';
+import { Temporal } from 'temporal-polyfill';
 
 const isProduction = process.env.ELEVENTY_RUN_MODE === 'build';
 
 const baseUrl = 'https://www.louiechristie.com';
 
-export const config = {
-  pathPrefix: '/',
-};
+/** @param {import("@11ty/eleventy").UserConfig} eleventyConfig */
+export default async function (eleventyConfig) {
+  // Drafts, see also _data/eleventyDataSchema.js
+  eleventyConfig.addPreprocessor('drafts', '*', (data, content) => {
+    if (data.draft && process.env.ELEVENTY_RUN_MODE === 'build') {
+      return false;
+    }
+  });
 
-export default function (eleventyConfig) {
+  // Copy the contents of the `public` folder to the output folder
+  // For example, `./public/css/` ends up in `_site/css/`
+  eleventyConfig.addPassthroughCopy({
+    './img/': '/img',
+  });
+  eleventyConfig.addPassthroughCopy('./feed/pretty-atom-feed.xsl');
   eleventyConfig.addPassthroughCopy('stylesheets');
   eleventyConfig.addPassthroughCopy('mstile-*.png');
   eleventyConfig.addPassthroughCopy('favicon*');
@@ -24,139 +42,103 @@ export default function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy('img');
   eleventyConfig.addPassthroughCopy('browserconfig.xml');
   eleventyConfig.addPassthroughCopy('site.webmanifest');
-  eleventyConfig.addPassthroughCopy({ '_tmp/bak/blog': 'blog' });
   eleventyConfig.addPassthroughCopy({
     '_tmp/bak/intro-to-web-dev-course': 'intro-to-web-dev-course',
   });
-  eleventyConfig.addPassthroughCopy({
-    '_tmp/bak/trivia-trundle': 'trivia-trundle',
-  });
-  eleventyConfig.addPassthroughCopy({ '_tmp/bak/weeks-to-go': 'weeks-to-go' });
 
+  // Run Eleventy when these files change:
+  // https://www.11ty.dev/docs/watch-serve/#add-your-own-watch-targets
+
+  // Watch images for the image pipeline.
+  eleventyConfig.addWatchTarget('content/**/*.{svg,webp,png,jpg,jpeg,gif}');
+
+  // Per-page bundles, see https://github.com/11ty/eleventy-plugin-bundle
+  // Adds the {% css %} paired shortcode
+  eleventyConfig.addBundle('css', {
+    toFileDirectory: 'dist',
+  });
+  // Adds the {% js %} paired shortcode
+  eleventyConfig.addBundle('js', {
+    toFileDirectory: 'dist',
+  });
+
+  // Official plugins
+  eleventyConfig.addPlugin(pluginSyntaxHighlight, {
+    preAttributes: { tabindex: 0 },
+  });
+  eleventyConfig.addPlugin(pluginNavigation);
+  eleventyConfig.addPlugin(HtmlBasePlugin, {
+    baseHref: isProduction ? baseUrl : config.pathPrefix,
+    extensions: 'html',
+  });
+  eleventyConfig.addPlugin(InputPathToUrlTransformPlugin);
+
+  eleventyConfig.addPlugin(feedPlugin, {
+    type: 'atom', // or "rss", "json"
+    outputPath: '/feed/feed.xml',
+    stylesheet: 'pretty-atom-feed.xsl',
+    templateData: {
+      eleventyNavigation: {
+        key: 'Feed',
+        order: 4,
+      },
+    },
+    collection: {
+      name: 'posts',
+      limit: 10,
+    },
+    metadata: {
+      language: 'en-gb',
+      title: 'Louie Christie Blog',
+      subtitle:
+        'Adventurous, tech geek, underground comedian in my own head. 😬',
+      base: 'https://www.louiechristie.com/',
+      author: {
+        name: 'Louie Christie',
+      },
+    },
+  });
+
+  // Image optimization: https://www.11ty.dev/docs/plugins/image/#eleventy-transform
   eleventyConfig.addPlugin(eleventyImageTransformPlugin, {
-    formats: ['avif', 'webp', 'svg'],
+    // Output formats for each image.
+    formats: ['avif', 'webp', 'svg', 'auto'],
     svgShortCircuit: true,
     outputDir: '/img/',
     failOnError: true,
     transformOnRequest: false,
     widths: ['auto', 400, 800, 1200],
+    failOnError: false,
     htmlOptions: {
       imgAttributes: {
+        // e.g. <img loading decoding> assigned on the HTML tag will override these values.
         sizes: '(min-width: 1024em) 400px, 100vw',
         loading: 'lazy',
         decoding: 'async',
       },
     },
+
+    sharpOptions: {
+      animated: true,
+    },
   });
 
-  eleventyConfig.addPlugin(EleventyHtmlBasePlugin, {
-    baseHref: isProduction ? baseUrl : config.pathPrefix,
-    extensions: 'html',
+  // Filters
+  eleventyConfig.addPlugin(pluginFilters);
+
+  eleventyConfig.addPlugin(IdAttributePlugin, {
+    // by default we use Eleventy’s built-in `slugify` filter:
+    // slugify: eleventyConfig.getFilter("slugify"),
+    // selector: "h1,h2,h3,h4,h5,h6", // default
   });
 
   eleventyConfig.addPlugin(eleventyAutoCacheBuster);
 
-  eleventyConfig.addShortcode('analytics', async function () {
-    const humanReadableTime = (seconds) => {
-      const duration = Temporal.Duration.from({ seconds });
-
-      // More than an hour
-      if (seconds >= 60 * 60) {
-        const roundedDuration = duration.round({
-          largestUnit: 'hours',
-          smallestUnit: 'hours',
-          roundingIncrement: seconds >= 60 * 60,
-        });
-        const hours = roundedDuration.hours;
-        return `${hours} hour${hours > 1 ? 's' : ''}`;
-      }
-
-      // More than 15 minutes, 15 minute increments
-      if (seconds >= 60 * 15) {
-        const roundedDuration = duration.round({
-          largestUnit: 'minutes',
-          smallestUnit: 'minutes',
-          roundingIncrement: 15,
-        });
-        const minutes = roundedDuration.minutes;
-        return `${minutes} minute${minutes > 1 ? 's' : ''}`;
-      }
-
-      // More than 1 minutes, 1 minute increments
-      if (seconds >= 60) {
-        const roundedDuration = duration.round({
-          largestUnit: 'minutes',
-          smallestUnit: 'minutes',
-          roundingIncrement: 1,
-        });
-        const minutes = roundedDuration.minutes;
-        return `${minutes} minute${minutes > 1 ? 's' : ''}`;
-      }
-
-      // More than 15 seconds, 15 second increments
-      if (seconds >= 15) {
-        const roundedDuration = duration.round({
-          largestUnit: 'seconds',
-          smallestUnit: 'seconds',
-          roundingIncrement: 15,
-        });
-        const secs = roundedDuration.seconds;
-        return `${secs} second${secs > 1 ? 's' : ''}`;
-      }
-
-      // Less than 15 seconds
-      return `${seconds} second${seconds > 1 ? 's' : ''}`;
-    };
-
-    // Get today's date
-    const today = Temporal.Now.plainDateISO();
-
-    // Calculate yesterday
-    const yesterday = today.subtract({ days: 1 });
-
-    // Calculate one month ago
-    const oneMonthAgo = today.subtract({ months: 1 });
-
-    const startDate = oneMonthAgo;
-    const endDate = yesterday;
-
-    const siteEngagementTime = await analytics(startDate, endDate);
-    const pageEngagementTime = await analytics(
-      startDate,
-      endDate,
-      this.page.url
-    );
-
-    return `
-      <div>
-        <p><img src="https://www.google.com/s2/favicons?sz=16&domain_url=https%3A%2F%2Fanalytics.google.com%2F" alt="Google Analytics Logo"> Analytics</p>
-        <div>Total humans' lives squandered browsing ${
-          Temporal.PlainDate.compare(
-            today,
-            Temporal.PlainDate.from({ year: today.year, month: 3, day: 14 })
-          ) > 0
-            ? '(last month)'
-            : '(since 14 Feb)'
-        }:</div>
-         <div class="analytics-stats-container">
-          <div class="analytics-stats">
-              <div class="analytics-stats-key">Website:</div>
-              <div class="analytics-stats-value">${humanReadableTime(
-                siteEngagementTime
-              )}</div> 
-              <div class="analytics-stats-key">Webpage ${
-                this.page.url || 'url not found'
-              }: </div>
-              <div class="analytics-stats-value">${humanReadableTime(
-                pageEngagementTime
-              )}</div>
-          </div>
-        </div>
-        
-       <p><center>Last checked: ${endDate}</center></p>
-      </div>
-    `;
+  eleventyConfig.addShortcode('currentBuildDate', () => {
+    return new Date().toISOString();
   });
+
+  eleventyConfig.addGlobalData('layout', 'layouts/base.njk');
 
   eleventyConfig.addShortcode('performance', async function () {
     const fullUrl = `${baseUrl}${this.page.url}`;
@@ -184,7 +166,7 @@ export default function (eleventyConfig) {
     let data = await Cache(
       `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${params.toString()}`,
       {
-        duration: '10m',
+        duration: '1d',
         type: 'json',
       }
     );
@@ -230,12 +212,14 @@ export default function (eleventyConfig) {
       <p>
         <a href="https://developers.google.com/speed/pagespeed/insights/?url=${fullUrl}">
           <img
-            eleventy:ignore
-            alt='Lighthouse icon'
-            src='https://github.com/GoogleChrome/lighthouse/raw/refs/heads/main/assets/lh_favicon.svg'
-            width='16'
-            height='16'
-          ></a>
+              eleventy:ignore
+              alt='Lighthouse icon'
+              src='https://github.com/GoogleChrome/lighthouse/raw/refs/heads/main/assets/lh_favicon.svg'
+              width='16'
+              height='16'
+              class="footer-icon"
+            >
+        </a>
         Page performance:
       </p>
       <div class='lighthouse-grid-container'>
@@ -264,9 +248,44 @@ export default function (eleventyConfig) {
   `;
   });
 
-  return {
-    markdownTemplateEngine: 'njk',
-    htmlTemplateEngine: 'njk',
-    dataTemplateEngine: 'njk',
-  };
+  // Features to make your build faster (when you need them)
+
+  // If your passthrough copy gets heavy and cumbersome, add this line
+  // to emulate the file copy on the dev server. Learn more:
+  // https://www.11ty.dev/docs/copy/#emulate-passthrough-copy-during-serve
+
+  // eleventyConfig.setServerPassthroughCopyBehavior("passthrough");
 }
+
+export const config = {
+  // Control which files Eleventy will process
+  // e.g.: *.md, *.njk, *.html, *.liquid
+  templateFormats: ['11ty.js', 'md', 'njk', 'html'],
+
+  // Pre-process *.md files with: (default: `liquid`)
+  markdownTemplateEngine: 'njk',
+
+  // Pre-process *.html files with: (default: `liquid`)
+  htmlTemplateEngine: 'njk',
+
+  // These are all optional:
+  dir: {
+    input: '.', // default: "."
+    includes: '_includes', // default: "_includes" (`input` relative)
+    data: '../_data', // default: "_data" (`input` relative)
+    output: '_site',
+  },
+
+  // -----------------------------------------------------------------
+  // Optional items:
+  // -----------------------------------------------------------------
+
+  // If your site deploys to a subdirectory, change `pathPrefix`.
+  // Read more: https://www.11ty.dev/docs/config/#deploy-to-a-subdirectory-with-a-path-prefix
+
+  // When paired with the HTML <base> plugin https://www.11ty.dev/docs/plugins/html-base/
+  // it will transform any absolute URLs in your HTML to include this
+  // folder name and does **not** affect where things go in the output folder.
+
+  pathPrefix: '/',
+};

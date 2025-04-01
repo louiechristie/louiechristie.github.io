@@ -1,33 +1,66 @@
 {
   "name": "louiechristie.com",
-  "version": "0.1.0",
-  "description": "## Setup local development",
+  "version": "0.2.0",
+  "description": "Personal website.",
   "type": "module",
-  "main": "index.js",
   "scripts": {
-    "watch": "eleventy --serve",
-    "build": "eleventy",
-    "serve": "cd _site && npx serve && cd ..",
+    "build": "npm run import:wordpress-blog && npx @11ty/eleventy && npm run build:intro-to-web-dev-course && npm run build:memes && npm run build:trivia-trundle && npm run build:weeks-to-go",
+    "build:memes": "rsync -av --delete --exclude='.git/' $INIT_CWD/_tmp/bak/memes $INIT_CWD/_site/",
+    "build:intro-to-web-dev-course": "rsync -av --delete --exclude='.git/' $INIT_CWD/_tmp/bak/intro-to-web-dev-course $INIT_CWD/_site/",
+    "build:weeks-to-go": "cp -r $INIT_CWD/_tmp/bak/weeks-to-go $INIT_CWD/_site/",
+    "build:trivia-trundle": "cp -r $INIT_CWD/_tmp/bak/trivia-trundle $INIT_CWD/_site/",
+    "build:travel-guide": "cp -r $INIT_CWD/_tmp/bak/travel-guide $INIT_CWD/_site/",
+    "build-nocolor": "cross-env NODE_DISABLE_COLORS=1 npx @11ty/eleventy",
+    "build-ghpages": "npx @11ty/eleventy --pathprefix=/louiechristie.github.io/",
+    "import:wordpress-blog": "npx @11ty/import wordpress http://blog.local/ --output=blog --assetrefs=colocate",
+    "start": "npx @11ty/eleventy --serve --quiet",
+    "start-ghpages": "npx @11ty/eleventy --pathprefix=/louiechristie.github.io/ --serve --quiet",
+    "debug": "cross-env DEBUG=Eleventy* npx @11ty/eleventy",
+    "debugstart": "cross-env DEBUG=Eleventy* npx @11ty/eleventy --serve --quiet",
+    "benchmark": "cross-env DEBUG=Eleventy:Benchmark* npx @11ty/eleventy",
+    "import": "node ./node_modules/@11ty/import/cli.js wordpress http://blog.local/ --output=blog --assetrefs=colocate --cacheduration=1s --overwrite",
     "test": "npx playwright test",
-    "debug": "npx playwright test --ui",
+    "debugtest": "npx playwright test --ui",
     "compare": "diff $INIT_CWD/_tmp/bak $INIT_CWD/_site --color --recursive --exclude={.*,README*,readme*,start,deploy,shower-of-comedy,travel-guide} --ignore-all-space --strip-trailing-cr",
     "deploy": "$INIT_CWD/node_modules/wrangler/bin/wrangler.js pages deploy _site"
   },
-  "keywords": [],
-  "author": "Louie Christie",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:louiechristie/louiechristie.github.io.git"
+  },
+  "author": {
+    "name": "Louie Christie",
+    "email": "hello@louiechristie.com",
+    "url": "https://www.louiechristie.com/"
+  },
   "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18"
+  },
+  "bugs": {
+    "url": "https://github.com/louiechristie/louiechristie.github.io/issues"
+  },
+  "homepage": "https://www.louiechristie.com/",
   "devDependencies": {
     "@11ty/eleventy": "^3.0.0",
+    "@11ty/eleventy-cache-assets": "^2.3.0",
+    "@11ty/eleventy-img": "^6.0.1",
+    "@11ty/eleventy-navigation": "^0.3.5",
+    "@11ty/eleventy-plugin-rss": "^2.0.2",
+    "@11ty/eleventy-plugin-syntaxhighlight": "^5.0.0",
+    "@google-analytics/data": "^4.12.0",
     "@playwright/test": "^1.48.1",
-    "@types/node": "^22.7.7",
-    "eleventy-auto-cache-buster": "^0.7.0",
-    "wrangler": "^3.106.0"
+    "eleventy-auto-cache-buster": "^0.8.1",
+    "cross-env": "^7.0.3",
+    "luxon": "^3.5.0",
+    "prismjs": "^1.29.0",
+    "temporal-polyfill": "^0.2.5",
+    "wrangler": "^3.106.0",
+    "zod": "^3.23.8",
+    "zod-validation-error": "^3.3.1",
+    "@11ty/import": "^1.0.14"
   },
   "dependencies": {
-    "@11ty/eleventy-cache-assets": "^2.3.0",
-    "@11ty/eleventy-img": "^6.0.0",
-    "@google-analytics/data": "^4.12.0",
-    "dotenv": "^16.4.7",
-    "temporal-polyfill": "^0.2.5"
+    "@zachleat/heading-anchors": "^1.0.1"
   }
 }

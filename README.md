@@ -2,20 +2,28 @@
 
 [![Playwright Tests](https://github.com/louiechristie/louiechristie.github.io/actions/workflows/playwright.yml/badge.svg)](https://github.com/louiechristie/louiechristie.github.io/actions/workflows/playwright.yml)
 
-## Setup local development
+A personal website.
 
-Clone repository.
+## Getting Started
 
-In a console start your favorite local web server that uses live reloading.
+1. Install dependencies
 
-For example:
-
-```console
-npx serve
+```
+npm install
 ```
 
-Or:
+1. Run Eleventy
 
-```console
-npx browser-sync start --server --files "**/*.css, **/*.html, **/.js"
+Generate a production-ready build to the `_site` folder:
+
 ```
+npx @11ty/eleventy
+```
+
+Or build and host on a local development server:
+
+```
+npx @11ty/eleventy --serve
+```
+
+Or you can run [debug mode](https://www.11ty.dev/docs/debugging/) to see all the internals.

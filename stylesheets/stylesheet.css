@@ -59,8 +59,13 @@ body {
 
 @media all and (min-width: 1024px) {
   body {
-    max-width: initial
+    max-width: initial;
+    width: 100%
   }
+}
+
+article {
+  max-width: 490px;
 }
 
 .headline-link,
@@ -401,11 +406,18 @@ aside {
 }
 
 .icon svg,
-.icon-image {
+.icon-image,
+img[src$=".svg"].icon-image {
   position: relative;
   width: 24px;
   height: 24px;
   top: -4px;
+}
+
+.footer-icon,
+img[src$=".svg"].footer-icon {
+  width: 24px;
+  height: 24px;
 }
 
 .colorized img {
